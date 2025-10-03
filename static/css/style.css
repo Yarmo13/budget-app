@@ -115,26 +115,6 @@ header h1 {
     z-index: 100;
 }
 
-.tabs .logo-section {
-    padding: 0 24px 24px 24px;
-    border-bottom: 2px solid var(--border-color);
-    margin-bottom: 16px;
-    text-align: center;
-}
-
-.tabs .logo-section img {
-    width: 60px;
-    height: auto;
-    margin-bottom: 12px;
-}
-
-.tabs .logo-section h2 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin: 0;
-}
-
 .tab-btn {
     background: transparent;
     border: none;

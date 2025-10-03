@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     checkAuth();
     initializeTabs();
     initializeExpenseForm();
+    initializeSavingsForm();
     initializeLogout();
     loadExpenses();
     setTodayDate();
@@ -62,6 +63,10 @@ function initializeTabs() {
                 loadDashboard();
             } else if (targetTab === 'budget') {
                 loadBudgetSetup();
+            } else if (targetTab === 'savings') {
+                loadSavings();
+            } else if (targetTab === 'reports') {
+                loadAvailableMonths();
             } else if (targetTab === 'visualizations') {
                 loadVisualizations();
             }
@@ -434,6 +439,178 @@ async function loadBudgetVsActual() {
         });
     } catch (error) {
         console.error('Error loading budget vs actual:', error);
+    }
+}
+
+// Savings functionality
+function initializeSavingsForm() {
+    const form = document.getElementById('savingsForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const data = {
+            date: document.getElementById('savingsDate').value,
+            amount: document.getElementById('savingsAmount').value,
+            description: document.getElementById('savingsDescription').value
+        };
+
+        try {
+            const response = await fetch('/api/savings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                showNotification('Savings added successfully!', 'success');
+                form.reset();
+                setTodayDate();
+                loadSavings();
+            }
+        } catch (error) {
+            showNotification('Error adding savings', 'error');
+        }
+    });
+
+    // Set today's date initially
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('savingsDate').value = today;
+}
+
+async function loadSavings() {
+    try {
+        const response = await fetch('/api/savings');
+        const savings = await response.json();
+
+        const savingsList = document.getElementById('savingsList');
+
+        if (savings.length === 0) {
+            savingsList.innerHTML = '<p class="no-data">No savings recorded yet</p>';
+            return;
+        }
+
+        savingsList.innerHTML = savings.map(s => `
+            <div class="expense-item">
+                <div class="expense-info">
+                    <div class="expense-category" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        💰 Savings
+                    </div>
+                    <div class="expense-details">
+                        <div class="expense-date">${formatDate(s.date)}</div>
+                        ${s.description ? `<div class="expense-description">${s.description}</div>` : ''}
+                    </div>
+                </div>
+                <div class="expense-actions">
+                    <div class="expense-amount">$${s.amount.toFixed(2)}</div>
+                    <button class="btn-delete" onclick="deleteSaving(${s.id})">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading savings:', error);
+    }
+}
+
+async function deleteSaving(id) {
+    if (!confirm('Are you sure you want to delete this savings entry?')) return;
+
+    try {
+        const response = await fetch(`/api/savings/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            showNotification('Savings deleted', 'success');
+            loadSavings();
+        }
+    } catch (error) {
+        showNotification('Error deleting savings', 'error');
+    }
+}
+
+// Monthly Reports functionality
+async function loadAvailableMonths() {
+    try {
+        const response = await fetch('/api/reports/available-months');
+        const months = await response.json();
+
+        const select = document.getElementById('reportMonthSelect');
+        select.innerHTML = '<option value="">Select a month...</option>';
+
+        months.reverse().forEach(month => {
+            const option = document.createElement('option');
+            option.value = month;
+            const date = new Date(month + '-01');
+            option.textContent = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+            select.appendChild(option);
+        });
+
+        select.addEventListener('change', (e) => {
+            if (e.target.value) {
+                loadMonthlyReport(e.target.value);
+            } else {
+                document.getElementById('reportContent').style.display = 'none';
+            }
+        });
+    } catch (error) {
+        console.error('Error loading available months:', error);
+    }
+}
+
+async function loadMonthlyReport(yearMonth) {
+    try {
+        const response = await fetch(`/api/reports/monthly/${yearMonth}`);
+        const report = await response.json();
+
+        // Update summary
+        const date = new Date(yearMonth + '-01');
+        document.getElementById('reportMonth').textContent = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        document.getElementById('reportTotalBudget').textContent = `$${report.total_budget.toFixed(2)}`;
+        document.getElementById('reportTotalSpent').textContent = `$${report.total_spent.toFixed(2)}`;
+        document.getElementById('reportTotalSaved').textContent = `$${report.total_saved.toFixed(2)}`;
+
+        const diffElement = document.getElementById('reportDifference');
+        diffElement.textContent = `$${Math.abs(report.total_difference).toFixed(2)}`;
+        diffElement.className = 'stat-value ' + (report.total_difference >= 0 ? 'success' : 'danger');
+
+        // Update categories
+        const categoryList = document.getElementById('reportCategoryList');
+        if (report.categories.length === 0) {
+            categoryList.innerHTML = '<p class="no-data">No expense data for this month</p>';
+        } else {
+            categoryList.innerHTML = report.categories.map(cat => `
+                <div class="report-category-item ${cat.status}">
+                    <div class="report-category-header">
+                        <span class="report-category-name">${cat.category}</span>
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                            ${cat.transaction_count} transaction${cat.transaction_count !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                    <div class="report-category-stats">
+                        <div class="report-stat">
+                            <span>Budget:</span>
+                            <strong>$${cat.budget.toFixed(2)}</strong>
+                        </div>
+                        <div class="report-stat">
+                            <span>Spent:</span>
+                            <strong>$${cat.spent.toFixed(2)}</strong>
+                        </div>
+                        <div class="report-stat">
+                            <span>${cat.difference >= 0 ? 'Under' : 'Over'}:</span>
+                            <strong style="color: ${cat.difference >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}">
+                                $${Math.abs(cat.difference).toFixed(2)}
+                            </strong>
+                        </div>
+                        <div class="report-stat">
+                            <span>% of Budget:</span>
+                            <strong>${cat.percentage.toFixed(1)}%</strong>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('reportContent').style.display = 'block';
+    } catch (error) {
+        console.error('Error loading monthly report:', error);
+        showNotification('Error loading report', 'error');
     }
 }
 

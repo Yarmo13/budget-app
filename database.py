@@ -18,6 +18,7 @@ class User(Base):
     expenses = relationship('Expense', back_populates='user', cascade='all, delete-orphan')
     budgets = relationship('Budget', back_populates='user', cascade='all, delete-orphan')
     settings = relationship('Settings', back_populates='user', cascade='all, delete-orphan')
+    savings = relationship('Saving', back_populates='user', cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -64,6 +65,19 @@ class Settings(Base):
 
     # Relationship
     user = relationship('User', back_populates='settings')
+
+class Saving(Base):
+    __tablename__ = 'savings'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    date = Column(Date, nullable=False)
+    amount = Column(Float, nullable=False)
+    description = Column(String(500))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationship
+    user = relationship('User', back_populates='savings')
 
 # Database initialization
 engine = create_engine('sqlite:///budget.db')

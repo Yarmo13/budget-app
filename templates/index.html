@@ -24,6 +24,8 @@
             <button class="tab-btn active" data-tab="expenses">Daily Expenses</button>
             <button class="tab-btn" data-tab="dashboard">Dashboard</button>
             <button class="tab-btn" data-tab="budget">Budget Setup</button>
+            <button class="tab-btn" data-tab="savings">Savings</button>
+            <button class="tab-btn" data-tab="reports">Monthly Reports</button>
             <button class="tab-btn" data-tab="visualizations">Visualizations</button>
         </nav>
 
@@ -112,6 +114,77 @@
                 <h3>Set Monthly Budget by Category</h3>
                 <div id="budgetInputs"></div>
                 <button id="saveBudgetBtn" class="btn btn-primary">Save Budget</button>
+            </div>
+        </div>
+
+        <!-- Savings Tab -->
+        <div id="savings" class="tab-content">
+            <div class="expense-form-container">
+                <h2>Add Savings</h2>
+                <form id="savingsForm">
+                    <div class="form-group">
+                        <label for="savingsDate">Date:</label>
+                        <input type="date" id="savingsDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="savingsAmount">Amount:</label>
+                        <input type="number" id="savingsAmount" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="savingsDescription">Description:</label>
+                        <input type="text" id="savingsDescription" placeholder="Optional note...">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Add Savings</button>
+                </form>
+            </div>
+
+            <div class="expense-list-container">
+                <h2>Savings History</h2>
+                <div id="savingsList"></div>
+            </div>
+        </div>
+
+        <!-- Monthly Reports Tab -->
+        <div id="reports" class="tab-content">
+            <h2>Monthly Reports</h2>
+
+            <div class="form-group">
+                <label for="reportMonthSelect">Select Month:</label>
+                <select id="reportMonthSelect" class="form-control">
+                    <option value="">Select a month...</option>
+                </select>
+            </div>
+
+            <div id="reportContent" style="display: none;">
+                <div class="report-summary">
+                    <h3 id="reportMonth"></h3>
+                    <div class="report-stats">
+                        <div class="stat-card">
+                            <h4>Total Budget</h4>
+                            <p id="reportTotalBudget" class="stat-value">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Total Spent</h4>
+                            <p id="reportTotalSpent" class="stat-value">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Total Saved</h4>
+                            <p id="reportTotalSaved" class="stat-value success">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Over/Under Budget</h4>
+                            <p id="reportDifference" class="stat-value">$0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-categories">
+                    <h3>Category Breakdown</h3>
+                    <div id="reportCategoryList"></div>
+                </div>
             </div>
         </div>
 

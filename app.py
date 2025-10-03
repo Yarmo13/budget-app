@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import func, extract
-from database import get_session, User, Expense, Budget, Settings
+from database import get_session, User, Expense, Budget, Settings, Saving
 import json
 import os
 
@@ -382,6 +382,171 @@ def budget_vs_actual():
             })
 
         return jsonify(comparison)
+    finally:
+        db_session.close()
+
+@app.route('/api/savings', methods=['GET', 'POST'])
+@login_required
+def savings():
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        if request.method == 'POST':
+            data = request.json
+            saving = Saving(
+                user_id=user_id,
+                date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+                amount=float(data['amount']),
+                description=data.get('description', '')
+            )
+            db_session.add(saving)
+            db_session.commit()
+            return jsonify({'success': True, 'id': saving.id})
+
+        else:  # GET
+            start_date = request.args.get('start_date')
+            end_date = request.args.get('end_date')
+
+            query = db_session.query(Saving).filter_by(user_id=user_id)
+
+            if start_date:
+                query = query.filter(Saving.date >= datetime.strptime(start_date, '%Y-%m-%d').date())
+            if end_date:
+                query = query.filter(Saving.date <= datetime.strptime(end_date, '%Y-%m-%d').date())
+
+            savings = query.order_by(Saving.date.desc()).all()
+
+            return jsonify([{
+                'id': s.id,
+                'date': s.date.strftime('%Y-%m-%d'),
+                'amount': s.amount,
+                'description': s.description
+            } for s in savings])
+    finally:
+        db_session.close()
+
+@app.route('/api/savings/<int:saving_id>', methods=['DELETE'])
+@login_required
+def delete_saving(saving_id):
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        saving = db_session.query(Saving).filter_by(id=saving_id, user_id=user_id).first()
+        if saving:
+            db_session.delete(saving)
+            db_session.commit()
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Saving not found'}), 404
+    finally:
+        db_session.close()
+
+@app.route('/api/reports/monthly/<year_month>')
+@login_required
+def monthly_report(year_month):
+    """Get detailed monthly report for a specific month (format: YYYY-MM)."""
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        # Parse year and month
+        year, month = map(int, year_month.split('-'))
+        start_date = datetime(year, month, 1).date()
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1).date()
+        else:
+            end_date = datetime(year, month + 1, 1).date()
+
+        # Get budgets
+        budgets = db_session.query(Budget).filter_by(user_id=user_id).all()
+        budget_dict = {b.category: b.monthly_limit for b in budgets}
+
+        # Get expenses for the month
+        expenses = db_session.query(
+            Expense.category,
+            func.sum(Expense.amount).label('total'),
+            func.count(Expense.id).label('count')
+        ).filter(
+            Expense.user_id == user_id,
+            Expense.date >= start_date,
+            Expense.date < end_date
+        ).group_by(Expense.category).all()
+
+        spending_dict = {e.category: {'total': float(e.total), 'count': e.count} for e in expenses}
+
+        # Get savings for the month
+        savings = db_session.query(
+            func.sum(Saving.amount).label('total')
+        ).filter(
+            Saving.user_id == user_id,
+            Saving.date >= start_date,
+            Saving.date < end_date
+        ).first()
+
+        total_saved = float(savings.total) if savings.total else 0
+
+        # Build category details
+        categories = []
+        total_spent = 0
+        total_budget = 0
+
+        for category in set(list(budget_dict.keys()) + list(spending_dict.keys())):
+            budget = budget_dict.get(category, 0)
+            spent_data = spending_dict.get(category, {'total': 0, 'count': 0})
+            spent = spent_data['total']
+            count = spent_data['count']
+
+            difference = budget - spent
+            percentage = (spent / budget * 100) if budget > 0 else 0
+
+            status = 'under'
+            if budget == 0:
+                status = 'no_budget'
+            elif spent > budget:
+                status = 'over'
+            elif percentage >= 80:
+                status = 'warning'
+
+            categories.append({
+                'category': category,
+                'budget': budget,
+                'spent': spent,
+                'difference': difference,
+                'percentage': round(percentage, 1),
+                'transaction_count': count,
+                'status': status
+            })
+
+            total_spent += spent
+            total_budget += budget
+
+        return jsonify({
+            'month': year_month,
+            'total_budget': total_budget,
+            'total_spent': total_spent,
+            'total_saved': total_saved,
+            'total_difference': total_budget - total_spent,
+            'categories': sorted(categories, key=lambda x: x['spent'], reverse=True)
+        })
+    finally:
+        db_session.close()
+
+@app.route('/api/reports/available-months')
+@login_required
+def available_months():
+    """Get list of months that have expense data."""
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        months = db_session.query(
+            extract('year', Expense.date).label('year'),
+            extract('month', Expense.date).label('month')
+        ).filter(
+            Expense.user_id == user_id
+        ).distinct().order_by('year', 'month').all()
+
+        return jsonify([
+            f"{int(m.year)}-{int(m.month):02d}"
+            for m in months
+        ])
     finally:
         db_session.close()
 

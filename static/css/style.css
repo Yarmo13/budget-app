@@ -680,6 +680,116 @@ header h1 {
     background: linear-gradient(135deg, #ef4444, #dc2626);
 }
 
+/* Reports */
+.report-summary {
+    margin-bottom: 32px;
+}
+
+.report-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 24px;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 16px;
+    border: 2px solid var(--border-color);
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-card h4 {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.stat-value.success {
+    color: var(--success-color);
+}
+
+.stat-value.danger {
+    color: var(--danger-color);
+}
+
+.report-categories {
+    background: var(--card-bg);
+    padding: 32px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.report-category-item {
+    background: var(--bg-secondary);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.report-category-item.over {
+    border-left-color: var(--danger-color);
+    background: #fef2f2;
+}
+
+.report-category-item.warning {
+    border-left-color: var(--warning-color);
+    background: #fffbeb;
+}
+
+.report-category-item.under {
+    border-left-color: var(--success-color);
+}
+
+.report-category-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    align-items: center;
+}
+
+.report-category-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.report-category-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.report-stat {
+    display: flex;
+    justify-content: space-between;
+}
+
+.report-stat strong {
+    color: var(--text-primary);
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
     .container {

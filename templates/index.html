@@ -8,26 +8,27 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <nav class="tabs">
+        <div class="logo-section">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+            <h2>Budget Tracker</h2>
+        </div>
+        <button class="tab-btn active" data-tab="expenses">Daily Expenses</button>
+        <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+        <button class="tab-btn" data-tab="budget">Budget Setup</button>
+        <button class="tab-btn" data-tab="savings">Savings</button>
+        <button class="tab-btn" data-tab="reports">Monthly Reports</button>
+        <button class="tab-btn" data-tab="visualizations">Visualizations</button>
+    </nav>
+
     <div class="container">
         <header>
-            <div class="header-logo">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo-img">
-                <h1>Personal Budget Tracker</h1>
-            </div>
+            <h1>Personal Budget Tracker</h1>
             <div class="user-info">
                 <span id="usernameDisplay"></span>
                 <button id="logoutBtn" class="btn btn-secondary btn-sm">Log Out</button>
             </div>
         </header>
-
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="expenses">Daily Expenses</button>
-            <button class="tab-btn" data-tab="dashboard">Dashboard</button>
-            <button class="tab-btn" data-tab="budget">Budget Setup</button>
-            <button class="tab-btn" data-tab="savings">Savings</button>
-            <button class="tab-btn" data-tab="reports">Monthly Reports</button>
-            <button class="tab-btn" data-tab="visualizations">Visualizations</button>
-        </nav>
 
         <!-- Expenses Tab -->
         <div id="expenses" class="tab-content active">

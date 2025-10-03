@@ -48,39 +48,31 @@ body {
     font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    display: flex;
+    min-height: 100vh;
 }
 
 .container {
-    max-width: 1280px;
-    margin: 0 auto;
+    flex: 1;
+    margin-left: 250px;
     padding: 32px 24px;
+    max-width: 100%;
 }
 
 /* Header */
 header {
-    text-align: center;
-    margin-bottom: 48px;
-    padding: 24px 0;
-    position: relative;
-}
-
-.header-logo {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-    gap: 16px;
-}
-
-.logo-img {
-    width: 80px;
-    height: auto;
-    object-fit: contain;
+    margin-bottom: 32px;
+    padding: 24px 0;
+    border-bottom: 2px solid var(--border-color);
 }
 
 header h1 {
-    font-size: 3rem;
+    font-size: 2rem;
     font-weight: 800;
-    margin-bottom: 12px;
+    margin: 0;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -89,9 +81,6 @@ header h1 {
 }
 
 .user-info {
-    position: absolute;
-    top: 24px;
-    right: 0;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -109,43 +98,71 @@ header h1 {
 }
 
 
-/* Tabs */
+/* Sidebar Navigation */
 .tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 40px;
-    border-bottom: 2px solid var(--border-color);
-    overflow-x: auto;
-    padding-bottom: 0;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 250px;
+    height: 100vh;
     background: var(--card-bg);
-    border-radius: 12px 12px 0 0;
-    padding: 8px 8px 0 8px;
+    border-right: 2px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+    z-index: 100;
+}
+
+.tabs .logo-section {
+    padding: 0 24px 24px 24px;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.tabs .logo-section img {
+    width: 60px;
+    height: auto;
+    margin-bottom: 12px;
+}
+
+.tabs .logo-section h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0;
 }
 
 .tab-btn {
     background: transparent;
     border: none;
-    padding: 14px 28px;
+    padding: 16px 24px;
     font-size: 1rem;
     font-weight: 600;
     color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border-bottom: 3px solid transparent;
+    border-left: 4px solid transparent;
     white-space: nowrap;
-    border-radius: 8px 8px 0 0;
+    text-align: left;
     letter-spacing: 0.01em;
+    width: 100%;
+    display: block;
 }
 
 .tab-btn:hover {
     color: var(--primary-color);
     background: var(--bg-secondary);
+    border-left-color: var(--primary-light);
 }
 
 .tab-btn.active {
     color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-    background: linear-gradient(to bottom, var(--bg-secondary), transparent);
+    border-left-color: var(--primary-color);
+    background: var(--bg-secondary);
+    font-weight: 700;
 }
 
 .tab-content {
@@ -792,32 +809,55 @@ header h1 {
 
 /* Mobile responsive */
 @media (max-width: 768px) {
-    .container {
-        padding: 20px 16px;
-    }
-
-    header {
-        padding-top: 60px;
-    }
-
-    header h1 {
-        font-size: 2rem;
-    }
-
-    .user-info {
-        position: static;
-        justify-content: center;
-        margin-bottom: 16px;
+    body {
+        flex-direction: column;
     }
 
     .tabs {
-        gap: 6px;
-        padding: 6px 6px 0 6px;
+        position: relative;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 2px solid var(--border-color);
+        padding: 12px;
+        flex-direction: row;
+        overflow-x: auto;
+    }
+
+    .tabs .logo-section {
+        display: none;
     }
 
     .tab-btn {
         padding: 12px 20px;
         font-size: 0.9rem;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+        white-space: nowrap;
+    }
+
+    .tab-btn.active {
+        border-left: none;
+        border-bottom-color: var(--primary-color);
+    }
+
+    .container {
+        margin-left: 0;
+        padding: 20px 16px;
+    }
+
+    header {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .user-info {
+        justify-content: center;
     }
 
     .summary-cards {

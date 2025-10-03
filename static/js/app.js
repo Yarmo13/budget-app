@@ -4,12 +4,43 @@ let currentBudgets = {};
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
     initializeTabs();
     initializeExpenseForm();
+    initializeLogout();
     checkLearningPeriodStatus();
     loadExpenses();
     setTodayDate();
 });
+
+// Check authentication
+async function checkAuth() {
+    try {
+        const response = await fetch('/api/auth/me');
+        const data = await response.json();
+
+        if (data.logged_in) {
+            document.getElementById('usernameDisplay').textContent = `Welcome, ${data.username}!`;
+        } else {
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = '/login';
+    }
+}
+
+// Logout functionality
+function initializeLogout() {
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login';
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+    });
+}
 
 // Tab navigation
 function initializeTabs() {

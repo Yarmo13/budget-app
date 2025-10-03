@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Personal Budget Tracker</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         .login-container {
@@ -108,7 +109,8 @@
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
-                <h1>💰 Budget Tracker</h1>
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="width: 120px; height: auto; margin-bottom: 16px;">
+                <h1>Budget Tracker</h1>
                 <p id="formTitle">Welcome back! Please log in.</p>
             </div>
 

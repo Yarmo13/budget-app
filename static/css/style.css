@@ -108,22 +108,6 @@ header h1 {
     font-size: 0.875rem;
 }
 
-.learning-banner {
-    background: var(--gradient-primary);
-    color: white;
-    padding: 20px 32px;
-    border-radius: 16px;
-    margin-top: 24px;
-    box-shadow: var(--shadow-lg);
-    backdrop-filter: blur(10px);
-}
-
-.learning-banner p {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-}
 
 /* Tabs */
 .tabs {

@@ -43,30 +43,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def get_or_create_start_date(user_id):
-    """Get or create the start date for the learning period."""
-    db_session = get_session()
-    try:
-        setting = db_session.query(Settings).filter_by(user_id=user_id, key='start_date').first()
-        if not setting:
-            setting = Settings(user_id=user_id, key='start_date', value=datetime.now().strftime('%Y-%m-%d'))
-            db_session.add(setting)
-            db_session.commit()
-        return datetime.strptime(setting.value, '%Y-%m-%d').date()
-    finally:
-        db_session.close()
-
-def is_learning_period_complete(user_id):
-    """Check if 30-day learning period is complete."""
-    start_date = get_or_create_start_date(user_id)
-    days_elapsed = (datetime.now().date() - start_date).days
-    return days_elapsed >= 30
-
-def get_learning_period_days(user_id):
-    """Get number of days elapsed in learning period."""
-    start_date = get_or_create_start_date(user_id)
-    days_elapsed = (datetime.now().date() - start_date).days
-    return min(days_elapsed, 30)
 
 @app.route('/')
 def index():
@@ -191,85 +167,6 @@ def delete_expense(expense_id):
     finally:
         db_session.close()
 
-@app.route('/api/learning-period/status')
-@login_required
-def learning_period_status():
-    """Get learning period status."""
-    user_id = session['user_id']
-    start_date = get_or_create_start_date(user_id)
-    days_elapsed = get_learning_period_days(user_id)
-    is_complete = is_learning_period_complete(user_id)
-
-    return jsonify({
-        'start_date': start_date.strftime('%Y-%m-%d'),
-        'days_elapsed': days_elapsed,
-        'days_remaining': max(0, 30 - days_elapsed),
-        'is_complete': is_complete
-    })
-
-@app.route('/api/learning-period/analysis')
-@login_required
-def learning_period_analysis():
-    """Analyze spending patterns from learning period."""
-    user_id = session['user_id']
-    db_session = get_session()
-    try:
-        start_date = get_or_create_start_date(user_id)
-        end_date = start_date + timedelta(days=30)
-
-        # Get expenses from learning period
-        expenses = db_session.query(Expense).filter(
-            Expense.user_id == user_id,
-            Expense.date >= start_date,
-            Expense.date < end_date
-        ).all()
-
-        # Calculate totals by category
-        category_totals = {}
-        for expense in expenses:
-            if expense.category not in category_totals:
-                category_totals[expense.category] = 0
-            category_totals[expense.category] += expense.amount
-
-        # Calculate suggested budgets
-        suggested_budgets = {}
-        for category, total in category_totals.items():
-            suggested_budgets[category] = round(total, 2)
-
-        total_spending = sum(category_totals.values())
-
-        return jsonify({
-            'total_spending': round(total_spending, 2),
-            'category_totals': category_totals,
-            'suggested_budgets': suggested_budgets,
-            'insights': generate_insights(category_totals, total_spending)
-        })
-    finally:
-        db_session.close()
-
-def generate_insights(category_totals, total_spending):
-    """Generate spending insights."""
-    insights = []
-
-    if not category_totals:
-        return ['No spending data available yet.']
-
-    # Find highest spending category
-    max_category = max(category_totals, key=category_totals.get)
-    max_amount = category_totals[max_category]
-    max_percentage = (max_amount / total_spending * 100) if total_spending > 0 else 0
-
-    insights.append(f"Your highest spending category is {max_category} (${max_amount:.2f}, {max_percentage:.1f}% of total)")
-
-    # Daily average
-    daily_avg = total_spending / 30
-    insights.append(f"Your average daily spending is ${daily_avg:.2f}")
-
-    # Monthly projection
-    monthly_projection = total_spending
-    insights.append(f"Your monthly spending is ${monthly_projection:.2f}")
-
-    return insights
 
 @app.route('/api/budgets', methods=['GET', 'POST'])
 @login_required
@@ -371,8 +268,7 @@ def dashboard():
             'categories': dashboard_data,
             'total_budget': total_budget,
             'total_spent': total_spent,
-            'total_remaining': max(0, total_budget - total_spent),
-            'is_learning_period': not is_learning_period_complete(user_id)
+            'total_remaining': max(0, total_budget - total_spent)
         })
     finally:
         db_session.close()

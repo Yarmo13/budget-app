@@ -1,5 +1,4 @@
 // Global state
-let learningPeriodComplete = false;
 let currentBudgets = {};
 
 // Initialize app
@@ -8,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTabs();
     initializeExpenseForm();
     initializeLogout();
-    checkLearningPeriodStatus();
     loadExpenses();
     setTodayDate();
 });
@@ -75,23 +73,6 @@ function initializeTabs() {
 function setTodayDate() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('expenseDate').value = today;
-}
-
-// Check learning period status
-async function checkLearningPeriodStatus() {
-    try {
-        const response = await fetch('/api/learning-period/status');
-        const data = await response.json();
-
-        learningPeriodComplete = data.is_complete;
-
-        if (!data.is_complete) {
-            document.getElementById('learningPeriodBanner').style.display = 'block';
-            document.getElementById('learningDaysRemaining').textContent = data.days_remaining;
-        }
-    } catch (error) {
-        console.error('Error checking learning period:', error);
-    }
 }
 
 // Expense form handling
@@ -241,39 +222,6 @@ async function loadDashboard() {
 
 // Load budget setup
 async function loadBudgetSetup() {
-    // Check if learning period is complete
-    const statusResponse = await fetch('/api/learning-period/status');
-    const statusData = await statusResponse.json();
-
-    if (statusData.is_complete) {
-        // Show analysis
-        const analysisResponse = await fetch('/api/learning-period/analysis');
-        const analysisData = await analysisResponse.json();
-
-        document.getElementById('learningPeriodInfo').style.display = 'block';
-
-        const analysisHTML = `
-            <p><strong>Total Spending (30 days):</strong> $${analysisData.total_spending.toFixed(2)}</p>
-            <h4>Spending by Category:</h4>
-            <ul>
-                ${Object.entries(analysisData.category_totals)
-                    .map(([cat, amount]) => `<li>${cat}: $${amount.toFixed(2)}</li>`)
-                    .join('')}
-            </ul>
-            <h4>Insights:</h4>
-            <ul>
-                ${analysisData.insights.map(insight => `<li>${insight}</li>`).join('')}
-            </ul>
-        `;
-
-        document.getElementById('analysisResults').innerHTML = analysisHTML;
-
-        // Use suggested button
-        document.getElementById('useSuggestedBtn').onclick = () => {
-            populateBudgetInputs(analysisData.suggested_budgets);
-        };
-    }
-
     // Load current budgets
     const budgetResponse = await fetch('/api/budgets');
     const budgets = await budgetResponse.json();

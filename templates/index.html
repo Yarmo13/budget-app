@@ -59,8 +59,14 @@
             <div class="expense-list-container">
                 <h2>Recent Expenses</h2>
                 <div class="filter-controls">
-                    <input type="date" id="filterStartDate" placeholder="Start date">
-                    <input type="date" id="filterEndDate" placeholder="End date">
+                    <div class="filter-input-group">
+                        <label for="filterStartDate">Start Date</label>
+                        <input type="date" id="filterStartDate">
+                    </div>
+                    <div class="filter-input-group">
+                        <label for="filterEndDate">End Date</label>
+                        <input type="date" id="filterEndDate">
+                    </div>
                     <button id="filterBtn" class="btn btn-secondary">Filter</button>
                     <button id="clearFilterBtn" class="btn btn-secondary">Clear</button>
                 </div>

@@ -289,20 +289,58 @@ header h1 {
     gap: 12px;
     margin-bottom: 24px;
     flex-wrap: wrap;
+    align-items: flex-end;
 }
 
-.filter-controls input {
+.filter-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filter-input-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.filter-controls input[type="date"] {
     padding: 12px 16px;
     border: 2px solid var(--border-color);
     border-radius: 12px;
     font-size: 0.95rem;
     transition: all 0.3s ease;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
 }
 
-.filter-controls input:focus {
+.filter-controls input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(59%) sepia(95%) saturate(450%) hue-rotate(100deg) brightness(95%) contrast(90%);
+    width: 20px;
+    height: 20px;
+}
+
+.filter-controls input[type="date"]::placeholder {
+    color: var(--text-secondary);
+    opacity: 1;
+}
+
+.filter-controls input[type="date"]:invalid {
+    color: var(--text-secondary);
+}
+
+.filter-controls input[type="date"]:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.filter-controls input[type="date"]:hover {
+    border-color: var(--border-accent);
 }
 
 /* Expense list */

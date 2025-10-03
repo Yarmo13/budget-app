@@ -168,21 +168,25 @@ async function loadExpenses() {
 
 // Delete expense
 async function deleteExpense(id) {
-    if (!confirm('Are you sure you want to delete this expense?')) return;
+    showConfirmModal(
+        'Delete Expense?',
+        'Are you sure you want to delete this expense? This action cannot be undone.',
+        async () => {
+            try {
+                const response = await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
 
-    try {
-        const response = await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
-
-        if (response.ok) {
-            showNotification('Expense deleted', 'success');
-            loadExpenses();
-        } else {
-            showNotification('Error deleting expense', 'error');
+                if (response.ok) {
+                    showNotification('Expense deleted', 'success');
+                    loadExpenses();
+                } else {
+                    showNotification('Error deleting expense', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Error deleting expense', 'error');
+            }
         }
-    } catch (error) {
-        console.error('Error:', error);
-        showNotification('Error deleting expense', 'error');
-    }
+    );
 }
 
 // Load dashboard
@@ -512,17 +516,21 @@ async function loadSavings() {
 }
 
 async function deleteSaving(id) {
-    if (!confirm('Are you sure you want to delete this savings entry?')) return;
-
-    try {
-        const response = await fetch(`/api/savings/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-            showNotification('Savings deleted', 'success');
-            loadSavings();
+    showConfirmModal(
+        'Delete Savings?',
+        'Are you sure you want to delete this savings entry? This action cannot be undone.',
+        async () => {
+            try {
+                const response = await fetch(`/api/savings/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    showNotification('Savings deleted', 'success');
+                    loadSavings();
+                }
+            } catch (error) {
+                showNotification('Error deleting savings', 'error');
+            }
         }
-    } catch (error) {
-        showNotification('Error deleting savings', 'error');
-    }
+    );
 }
 
 // Monthly Reports functionality
@@ -638,4 +646,38 @@ function showNotification(message, type) {
         notification.classList.remove('show');
         setTimeout(() => notification.remove(), 300);
     }, 3000);
+}
+
+// Custom Modal Functions
+function showConfirmModal(title, message, onConfirm) {
+    const modal = document.getElementById('confirmModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const confirmBtn = document.getElementById('confirmBtn');
+
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modal.classList.add('show');
+
+    // Remove old event listeners
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    // Add new event listener
+    document.getElementById('confirmBtn').onclick = () => {
+        closeModal();
+        onConfirm();
+    };
+
+    // Close on overlay click
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    };
+}
+
+function closeModal() {
+    const modal = document.getElementById('confirmModal');
+    modal.classList.remove('show');
 }

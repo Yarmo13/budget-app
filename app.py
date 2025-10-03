@@ -80,14 +80,24 @@ def signup():
     if not username or not password:
         return jsonify({'success': False, 'error': 'Username and password required'}), 400
 
+    # Only allow specific usernames and passwords
+    ALLOWED_ACCOUNTS = {
+        'cole': 'yarmoshuk',
+        'natalie': 'pinto'
+    }
+
+    # Verify credentials match allowed accounts
+    if username not in ALLOWED_ACCOUNTS or password != ALLOWED_ACCOUNTS[username]:
+        return jsonify({'success': False, 'error': 'Account creation is restricted'}), 403
+
     db_session = get_session()
     try:
-        # Check if user exists
+        # Check if user already exists
         existing_user = db_session.query(User).filter_by(username=username).first()
         if existing_user:
-            return jsonify({'success': False, 'error': 'Username already exists'}), 400
+            return jsonify({'success': False, 'error': 'Account already exists. Please log in.'}), 400
 
-        # Create new user
+        # Create the allowed user
         user = User(username=username)
         user.set_password(password)
         db_session.add(user)

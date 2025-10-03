@@ -20,6 +20,7 @@ CATEGORIES = [
     'Healthcare',
     'Housing',
     'Insurance',
+    'Subscriptions',
     'Other'
 ]
 

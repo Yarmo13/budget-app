@@ -320,7 +320,7 @@ async function loadMonthlyTrends() {
                 responsive: true,
                 maintainAspectRatio: true,
                 plugins: {
-                    legend: { display: true }
+                    legend: { display: false }
                 },
                 scales: {
                     y: {

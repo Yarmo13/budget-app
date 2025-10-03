@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Budget Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💰 Personal Budget Tracker</h1>
+            <div id="learningPeriodBanner" class="learning-banner" style="display: none;">
+                <p><strong>Learning Period:</strong> <span id="learningDaysRemaining"></span> days remaining</p>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="expenses">Daily Expenses</button>
+            <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+            <button class="tab-btn" data-tab="budget">Budget Setup</button>
+            <button class="tab-btn" data-tab="visualizations">Visualizations</button>
+        </nav>
+
+        <!-- Expenses Tab -->
+        <div id="expenses" class="tab-content active">
+            <div class="expense-form-container">
+                <h2>Add Expense</h2>
+                <form id="expenseForm">
+                    <div class="form-group">
+                        <label for="expenseDate">Date:</label>
+                        <input type="date" id="expenseDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expenseCategory">Category:</label>
+                        <select id="expenseCategory" required>
+                            <option value="">Select category...</option>
+                            {% for category in categories %}
+                            <option value="{{ category }}">{{ category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expenseAmount">Amount ($):</label>
+                        <input type="number" id="expenseAmount" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expenseDescription">Description (optional):</label>
+                        <input type="text" id="expenseDescription" placeholder="e.g., Grocery shopping">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Add Expense</button>
+                </form>
+            </div>
+
+            <div class="expense-list-container">
+                <h2>Recent Expenses</h2>
+                <div class="filter-controls">
+                    <input type="date" id="filterStartDate" placeholder="Start date">
+                    <input type="date" id="filterEndDate" placeholder="End date">
+                    <button id="filterBtn" class="btn btn-secondary">Filter</button>
+                    <button id="clearFilterBtn" class="btn btn-secondary">Clear</button>
+                </div>
+                <div id="expensesList"></div>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content">
+            <h2>Current Month Overview</h2>
+            <div id="dashboardSummary" class="summary-cards">
+                <div class="summary-card">
+                    <h3>Total Budget</h3>
+                    <p id="totalBudget" class="amount">$0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Total Spent</h3>
+                    <p id="totalSpent" class="amount">$0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Remaining</h3>
+                    <p id="totalRemaining" class="amount">$0.00</p>
+                </div>
+            </div>
+
+            <div id="categoryProgress"></div>
+
+            <div id="noBudgetMessage" style="display: none;" class="info-message">
+                <p>No budget set yet. Complete the learning period or create a budget in the Budget Setup tab.</p>
+            </div>
+        </div>
+
+        <!-- Budget Setup Tab -->
+        <div id="budget" class="tab-content">
+            <h2>Budget Setup</h2>
+
+            <div id="learningPeriodInfo" style="display: none;" class="info-message">
+                <h3>Learning Period Analysis</h3>
+                <div id="analysisResults"></div>
+                <button id="useSuggestedBtn" class="btn btn-primary">Use Suggested Budget</button>
+            </div>
+
+            <div id="budgetForm">
+                <h3>Set Monthly Budget by Category</h3>
+                <div id="budgetInputs"></div>
+                <button id="saveBudgetBtn" class="btn btn-primary">Save Budget</button>
+            </div>
+        </div>
+
+        <!-- Visualizations Tab -->
+        <div id="visualizations" class="tab-content">
+            <h2>Spending Insights</h2>
+
+            <div class="viz-section">
+                <h3>Monthly Spending Trends (Last 12 Months)</h3>
+                <canvas id="monthlyTrendsChart"></canvas>
+            </div>
+
+            <div class="viz-section">
+                <h3>Category Breakdown</h3>
+                <div class="filter-controls">
+                    <label>Period:</label>
+                    <input type="date" id="vizStartDate">
+                    <input type="date" id="vizEndDate">
+                    <button id="vizFilterBtn" class="btn btn-secondary">Update</button>
+                </div>
+                <canvas id="categoryBreakdownChart"></canvas>
+            </div>
+
+            <div class="viz-section">
+                <h3>Budget vs Actual (Current Month)</h3>
+                <canvas id="budgetVsActualChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -553,5 +553,9 @@ def available_months():
 
 if __name__ == '__main__':
     import os
+    # Ensure required accounts exist on startup
+    from init_accounts import ensure_accounts_exist
+    ensure_accounts_exist()
+
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)

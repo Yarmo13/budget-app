@@ -9,7 +9,7 @@ Usage:
 import sys
 import json
 from datetime import datetime
-from database import get_session, User, Expense, Budget, Settings
+from database import get_session, User, Expense, Budget, Settings, Saving
 
 def export_backup(filename=None):
     """Export all data to JSON file."""
@@ -24,7 +24,8 @@ def export_backup(filename=None):
             'users': [],
             'expenses': [],
             'budgets': [],
-            'settings': []
+            'settings': [],
+            'savings': []
         }
 
         # Export users (without password hashes for security)
@@ -68,6 +69,17 @@ def export_backup(filename=None):
                 'value': setting.value
             })
 
+        # Export savings
+        savings = db_session.query(Saving).all()
+        for saving in savings:
+            data['savings'].append({
+                'id': saving.id,
+                'user_id': saving.user_id,
+                'date': saving.date.isoformat(),
+                'amount': saving.amount,
+                'description': saving.description
+            })
+
         # Write to file
         with open(filename, 'w') as f:
             json.dump(data, f, indent=2)
@@ -76,6 +88,7 @@ def export_backup(filename=None):
         print(f"  Users: {len(data['users'])}")
         print(f"  Expenses: {len(data['expenses'])}")
         print(f"  Budgets: {len(data['budgets'])}")
+        print(f"  Savings: {len(data['savings'])}")
         print(f"  Settings: {len(data['settings'])}")
 
         return filename
@@ -150,11 +163,25 @@ def import_backup(filename):
                 db_session.add(setting)
                 setting_count += 1
 
+        # Restore savings
+        saving_count = 0
+        for saving_data in data.get('savings', []):
+            if saving_data['user_id'] in user_map:
+                saving = Saving(
+                    user_id=user_map[saving_data['user_id']],
+                    date=datetime.fromisoformat(saving_data['date']).date(),
+                    amount=saving_data['amount'],
+                    description=saving_data.get('description', '')
+                )
+                db_session.add(saving)
+                saving_count += 1
+
         db_session.commit()
 
         print(f"✓ Restore completed successfully!")
         print(f"  Expenses restored: {expense_count}")
         print(f"  Budgets restored: {budget_count}")
+        print(f"  Savings restored: {saving_count}")
         print(f"  Settings restored: {setting_count}")
 
         return True

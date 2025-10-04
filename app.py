@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import func, extract
-from database import get_session, User, Expense, Budget, Settings, Saving
+from database import get_session, User, Expense, Budget, Settings, Saving, SavingsGoal
 import json
 import os
 
@@ -438,6 +438,105 @@ def delete_saving(saving_id):
             db_session.commit()
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'Saving not found'}), 404
+    finally:
+        db_session.close()
+
+@app.route('/api/savings-goals', methods=['GET', 'POST'])
+@login_required
+def savings_goals():
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        if request.method == 'POST':
+            data = request.json
+            goal = SavingsGoal(
+                user_id=user_id,
+                name=data['name'],
+                target_amount=float(data['target_amount']),
+                current_amount=0
+            )
+            db_session.add(goal)
+            db_session.commit()
+            return jsonify({'success': True, 'id': goal.id})
+
+        else:  # GET
+            # Get archived parameter
+            show_archived = request.args.get('archived', 'false').lower() == 'true'
+
+            goals = db_session.query(SavingsGoal).filter_by(
+                user_id=user_id,
+                is_archived=show_archived
+            ).order_by(SavingsGoal.created_at.desc()).all()
+
+            return jsonify([{
+                'id': g.id,
+                'name': g.name,
+                'target_amount': g.target_amount,
+                'current_amount': g.current_amount,
+                'progress_percentage': round((g.current_amount / g.target_amount * 100) if g.target_amount > 0 else 0, 1),
+                'is_archived': g.is_archived,
+                'created_at': g.created_at.isoformat() if g.created_at else None,
+                'completed_at': g.completed_at.isoformat() if g.completed_at else None
+            } for g in goals])
+    finally:
+        db_session.close()
+
+@app.route('/api/savings-goals/<int:goal_id>/add', methods=['POST'])
+@login_required
+def add_to_goal(goal_id):
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        data = request.json
+        goal = db_session.query(SavingsGoal).filter_by(id=goal_id, user_id=user_id).first()
+
+        if not goal:
+            return jsonify({'success': False, 'error': 'Goal not found'}), 404
+
+        amount = float(data['amount'])
+        goal.current_amount += amount
+
+        # Check if goal is completed
+        if goal.current_amount >= goal.target_amount and not goal.completed_at:
+            goal.completed_at = datetime.utcnow()
+
+        db_session.commit()
+        return jsonify({'success': True, 'new_amount': goal.current_amount})
+    finally:
+        db_session.close()
+
+@app.route('/api/savings-goals/<int:goal_id>/archive', methods=['POST'])
+@login_required
+def archive_goal(goal_id):
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        goal = db_session.query(SavingsGoal).filter_by(id=goal_id, user_id=user_id).first()
+
+        if not goal:
+            return jsonify({'success': False, 'error': 'Goal not found'}), 404
+
+        goal.is_archived = True
+        if not goal.completed_at:
+            goal.completed_at = datetime.utcnow()
+
+        db_session.commit()
+        return jsonify({'success': True})
+    finally:
+        db_session.close()
+
+@app.route('/api/savings-goals/<int:goal_id>', methods=['DELETE'])
+@login_required
+def delete_goal(goal_id):
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        goal = db_session.query(SavingsGoal).filter_by(id=goal_id, user_id=user_id).first()
+        if goal:
+            db_session.delete(goal)
+            db_session.commit()
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Goal not found'}), 404
     finally:
         db_session.close()
 

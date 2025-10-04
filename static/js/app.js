@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTabs();
     initializeExpenseForm();
     initializeSavingsForm();
+    initializeSavingsGoals();
     initializeLogout();
     loadExpenses();
     setTodayDate();
@@ -65,6 +66,7 @@ function initializeTabs() {
                 loadBudgetSetup();
             } else if (targetTab === 'savings') {
                 loadSavings();
+                loadSavingsGoals();
             } else if (targetTab === 'reports') {
                 loadAvailableMonths();
             } else if (targetTab === 'visualizations') {
@@ -680,4 +682,180 @@ function showConfirmModal(title, message, onConfirm) {
 function closeModal() {
     const modal = document.getElementById('confirmModal');
     modal.classList.remove('show');
+}
+
+// Savings Goals functionality
+let showingArchivedGoals = false;
+
+function initializeSavingsGoals() {
+    document.getElementById('createGoalBtn').addEventListener('click', showCreateGoalModal);
+    document.getElementById('toggleArchivedBtn').addEventListener('click', toggleArchivedGoals);
+    loadSavingsGoals();
+}
+
+async function loadSavingsGoals() {
+    try {
+        const url = `/api/savings-goals?archived=${showingArchivedGoals}`;
+        const response = await fetch(url);
+        const goals = await response.json();
+
+        const goalsList = document.getElementById('goalsList');
+
+        if (goals.length === 0) {
+            goalsList.innerHTML = `<p class="no-data">${showingArchivedGoals ? 'No archived goals' : 'No active goals. Create one to get started!'}</p>`;
+            return;
+        }
+
+        goalsList.innerHTML = goals.map(goal => `
+            <div class="savings-goal-item">
+                <div class="goal-header">
+                    <h3 class="goal-name">${goal.name}</h3>
+                    <div class="goal-amount">$${goal.current_amount.toFixed(2)} / $${goal.target_amount.toFixed(2)}</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${goal.progress_percentage}%; background: linear-gradient(135deg, #10b981, #059669);"></div>
+                </div>
+                <div class="goal-footer">
+                    <span class="goal-percentage">${goal.progress_percentage}% complete</span>
+                    ${!showingArchivedGoals ? `
+                        <div class="goal-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="showAddToGoalModal(${goal.id}, '${goal.name}')">Add Money</button>
+                            <button class="btn btn-secondary btn-sm" onclick="archiveGoal(${goal.id})">Archive</button>
+                            <button class="btn-delete btn-sm" onclick="deleteGoal(${goal.id})">Delete</button>
+                        </div>
+                    ` : `
+                        <div class="goal-actions">
+                            <span class="goal-completed-date">Archived ${goal.completed_at ? formatDate(goal.completed_at.split('T')[0]) : ''}</span>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading savings goals:', error);
+    }
+}
+
+function toggleArchivedGoals() {
+    showingArchivedGoals = !showingArchivedGoals;
+    const btn = document.getElementById('toggleArchivedBtn');
+    btn.textContent = showingArchivedGoals ? 'View Active Goals' : 'View Archived Goals';
+    loadSavingsGoals();
+}
+
+function showCreateGoalModal() {
+    const name = prompt('What are you saving for?');
+    if (!name) return;
+
+    const targetAmount = parseFloat(prompt('Target amount ($):'));
+    if (!targetAmount || targetAmount <= 0) {
+        showNotification('Please enter a valid target amount', 'error');
+        return;
+    }
+
+    createSavingsGoal(name, targetAmount);
+}
+
+async function createSavingsGoal(name, targetAmount) {
+    try {
+        const response = await fetch('/api/savings-goals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, target_amount: targetAmount })
+        });
+
+        if (response.ok) {
+            showNotification('Goal created successfully!', 'success');
+            loadSavingsGoals();
+        } else {
+            showNotification('Error creating goal', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating goal:', error);
+        showNotification('Error creating goal', 'error');
+    }
+}
+
+function showAddToGoalModal(goalId, goalName) {
+    const amount = parseFloat(prompt(`How much would you like to add to "${goalName}"?`));
+    if (!amount || amount <= 0) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+    }
+
+    addToGoal(goalId, amount);
+}
+
+async function addToGoal(goalId, amount) {
+    try {
+        const response = await fetch(`/api/savings-goals/${goalId}/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.completed) {
+                showNotification('🎉 Goal completed! Congratulations!', 'success');
+            } else {
+                showNotification('Amount added successfully!', 'success');
+            }
+            loadSavingsGoals();
+        } else {
+            showNotification(data.error || 'Error adding to goal', 'error');
+        }
+    } catch (error) {
+        console.error('Error adding to goal:', error);
+        showNotification('Error adding to goal', 'error');
+    }
+}
+
+async function archiveGoal(goalId) {
+    showConfirmModal(
+        'Archive Goal?',
+        'Are you sure you want to archive this goal? You can view it later in archived goals.',
+        async () => {
+            try {
+                const response = await fetch(`/api/savings-goals/${goalId}/archive`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    showNotification('Goal archived', 'success');
+                    loadSavingsGoals();
+                } else {
+                    showNotification('Error archiving goal', 'error');
+                }
+            } catch (error) {
+                console.error('Error archiving goal:', error);
+                showNotification('Error archiving goal', 'error');
+            }
+        }
+    );
+}
+
+async function deleteGoal(goalId) {
+    showConfirmModal(
+        'Delete Goal?',
+        'Are you sure you want to permanently delete this goal? This action cannot be undone.',
+        async () => {
+            try {
+                const response = await fetch(`/api/savings-goals/${goalId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showNotification('Goal deleted', 'success');
+                    loadSavingsGoals();
+                } else {
+                    showNotification('Error deleting goal', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting goal:', error);
+                showNotification('Error deleting goal', 'error');
+            }
+        }
+    );
 }

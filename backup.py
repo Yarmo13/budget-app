@@ -9,7 +9,7 @@ Usage:
 import sys
 import json
 from datetime import datetime
-from database import get_session, User, Expense, Budget, Settings, Saving
+from database import get_session, User, Expense, Budget, Settings, Saving, SavingsGoal
 
 def export_backup(filename=None):
     """Export all data to JSON file."""
@@ -25,7 +25,8 @@ def export_backup(filename=None):
             'expenses': [],
             'budgets': [],
             'settings': [],
-            'savings': []
+            'savings': [],
+            'savings_goals': []
         }
 
         # Export users (without password hashes for security)
@@ -80,6 +81,20 @@ def export_backup(filename=None):
                 'description': saving.description
             })
 
+        # Export savings goals
+        goals = db_session.query(SavingsGoal).all()
+        for goal in goals:
+            data['savings_goals'].append({
+                'id': goal.id,
+                'user_id': goal.user_id,
+                'name': goal.name,
+                'target_amount': goal.target_amount,
+                'current_amount': goal.current_amount,
+                'is_archived': goal.is_archived,
+                'created_at': goal.created_at.isoformat() if goal.created_at else None,
+                'completed_at': goal.completed_at.isoformat() if goal.completed_at else None
+            })
+
         # Write to file
         with open(filename, 'w') as f:
             json.dump(data, f, indent=2)
@@ -89,6 +104,7 @@ def export_backup(filename=None):
         print(f"  Expenses: {len(data['expenses'])}")
         print(f"  Budgets: {len(data['budgets'])}")
         print(f"  Savings: {len(data['savings'])}")
+        print(f"  Savings Goals: {len(data['savings_goals'])}")
         print(f"  Settings: {len(data['settings'])}")
 
         return filename
@@ -176,12 +192,29 @@ def import_backup(filename):
                 db_session.add(saving)
                 saving_count += 1
 
+        # Restore savings goals
+        goal_count = 0
+        for goal_data in data.get('savings_goals', []):
+            if goal_data['user_id'] in user_map:
+                goal = SavingsGoal(
+                    user_id=user_map[goal_data['user_id']],
+                    name=goal_data['name'],
+                    target_amount=goal_data['target_amount'],
+                    current_amount=goal_data['current_amount'],
+                    is_archived=goal_data.get('is_archived', False),
+                    created_at=datetime.fromisoformat(goal_data['created_at']) if goal_data.get('created_at') else None,
+                    completed_at=datetime.fromisoformat(goal_data['completed_at']) if goal_data.get('completed_at') else None
+                )
+                db_session.add(goal)
+                goal_count += 1
+
         db_session.commit()
 
         print(f"✓ Restore completed successfully!")
         print(f"  Expenses restored: {expense_count}")
         print(f"  Budgets restored: {budget_count}")
         print(f"  Savings restored: {saving_count}")
+        print(f"  Savings Goals restored: {goal_count}")
         print(f"  Settings restored: {setting_count}")
 
         return True

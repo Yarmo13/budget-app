@@ -265,6 +265,7 @@ header h1 {
 }
 
 input[type="text"],
+input[type="password"],
 input[type="number"],
 input[type="date"],
 select,

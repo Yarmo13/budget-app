@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTabs();
     initializeExpenseForm();
     initializeSavingsForm();
-    initializeSavingsGoals();
     initializeLogout();
     loadExpenses();
     setTodayDate();
@@ -66,6 +65,7 @@ function initializeTabs() {
                 loadBudgetSetup();
             } else if (targetTab === 'savings') {
                 loadSavings();
+                initializeSavingsGoals();
                 loadSavingsGoals();
             } else if (targetTab === 'reports') {
                 loadAvailableMonths();
@@ -686,11 +686,19 @@ function closeModal() {
 
 // Savings Goals functionality
 let showingArchivedGoals = false;
+let savingsGoalsInitialized = false;
 
 function initializeSavingsGoals() {
-    document.getElementById('createGoalBtn').addEventListener('click', showCreateGoalModal);
-    document.getElementById('toggleArchivedBtn').addEventListener('click', toggleArchivedGoals);
-    loadSavingsGoals();
+    if (savingsGoalsInitialized) return;
+
+    const createBtn = document.getElementById('createGoalBtn');
+    const toggleBtn = document.getElementById('toggleArchivedBtn');
+
+    if (createBtn && toggleBtn) {
+        createBtn.addEventListener('click', showCreateGoalModal);
+        toggleBtn.addEventListener('click', toggleArchivedGoals);
+        savingsGoalsInitialized = true;
+    }
 }
 
 async function loadSavingsGoals() {

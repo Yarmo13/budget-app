@@ -245,7 +245,7 @@ async function loadBudgetSetup() {
 }
 
 function populateBudgetInputs(budgets) {
-    const categories = ['Groceries', 'Dining Out', 'Transportation', 'Entertainment', 'Utilities', 'Shopping', 'Healthcare', 'Housing', 'Insurance', 'Other'];
+    const categories = ['Groceries', 'Dining Out', 'Transportation', 'Gas', 'Entertainment', 'Utilities', 'Shopping', 'Healthcare', 'Housing', 'Insurance', 'Subscriptions', 'Other'];
 
     const inputs = categories.map(cat => `
         <div class="budget-input-group">
@@ -259,7 +259,7 @@ function populateBudgetInputs(budgets) {
 }
 
 async function saveBudget() {
-    const categories = ['Groceries', 'Dining Out', 'Transportation', 'Entertainment', 'Utilities', 'Shopping', 'Healthcare', 'Housing', 'Insurance', 'Other'];
+    const categories = ['Groceries', 'Dining Out', 'Transportation', 'Gas', 'Entertainment', 'Utilities', 'Shopping', 'Healthcare', 'Housing', 'Insurance', 'Subscriptions', 'Other'];
 
     const budgets = {};
     categories.forEach(cat => {

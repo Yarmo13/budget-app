@@ -14,6 +14,7 @@ CATEGORIES = [
     'Groceries',
     'Dining Out',
     'Transportation',
+    'Gas',
     'Entertainment',
     'Utilities',
     'Shopping',

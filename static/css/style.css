@@ -316,6 +316,7 @@ select option {
     font-weight: 600;
     background: white;
     color: var(--text-primary);
+    font-family: 'din-round', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 select option:hover,

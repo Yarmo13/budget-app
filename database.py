@@ -20,6 +20,7 @@ class User(Base):
     settings = relationship('Settings', back_populates='user', cascade='all, delete-orphan')
     savings = relationship('Saving', back_populates='user', cascade='all, delete-orphan')
     savings_goals = relationship('SavingsGoal', back_populates='user', cascade='all, delete-orphan')
+    recurring_expenses = relationship('RecurringExpense', back_populates='user', cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -94,6 +95,26 @@ class SavingsGoal(Base):
 
     # Relationship
     user = relationship('User', back_populates='savings_goals')
+
+class RecurringExpense(Base):
+    __tablename__ = 'recurring_expenses'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    name = Column(String(200), nullable=False)
+    category = Column(String(100), nullable=False)
+    amount = Column(Float, nullable=False)
+    frequency = Column(String(20), nullable=False)  # 'daily', 'weekly', 'monthly', 'yearly'
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date)  # Optional, for subscriptions that will end
+    day_of_month = Column(Integer)  # For monthly (1-31)
+    day_of_week = Column(Integer)  # For weekly (0=Monday, 6=Sunday)
+    last_generated = Column(Date)  # Track when we last created an expense from this
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationship
+    user = relationship('User', back_populates='recurring_expenses')
 
 # Database initialization
 engine = create_engine('sqlite:///budget.db')

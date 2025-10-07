@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import func, extract
-from database import get_session, User, Expense, Budget, Settings, Saving, SavingsGoal
+from database import get_session, User, Expense, Budget, Settings, Saving, SavingsGoal, RecurringExpense
 import json
 import os
 
@@ -627,6 +627,135 @@ def tracking_start_date():
                 return jsonify({'start_date': setting.value})
             else:
                 return jsonify({'start_date': None})
+    finally:
+        db_session.close()
+
+@app.route('/api/recurring-expenses', methods=['GET', 'POST'])
+@login_required
+def recurring_expenses():
+    """Get or create recurring expenses."""
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        if request.method == 'POST':
+            data = request.json
+            recurring = RecurringExpense(
+                user_id=user_id,
+                name=data['name'],
+                category=data['category'],
+                amount=float(data['amount']),
+                frequency=data['frequency'],
+                start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date(),
+                end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None,
+                day_of_month=data.get('day_of_month'),
+                day_of_week=data.get('day_of_week')
+            )
+            db_session.add(recurring)
+            db_session.commit()
+            return jsonify({'success': True, 'id': recurring.id})
+
+        else:  # GET
+            recurring = db_session.query(RecurringExpense).filter_by(
+                user_id=user_id,
+                is_active=True
+            ).order_by(RecurringExpense.created_at.desc()).all()
+
+            return jsonify([{
+                'id': r.id,
+                'name': r.name,
+                'category': r.category,
+                'amount': r.amount,
+                'frequency': r.frequency,
+                'start_date': r.start_date.strftime('%Y-%m-%d'),
+                'end_date': r.end_date.strftime('%Y-%m-%d') if r.end_date else None,
+                'day_of_month': r.day_of_month,
+                'day_of_week': r.day_of_week,
+                'last_generated': r.last_generated.strftime('%Y-%m-%d') if r.last_generated else None
+            } for r in recurring])
+    finally:
+        db_session.close()
+
+@app.route('/api/recurring-expenses/<int:recurring_id>', methods=['DELETE'])
+@login_required
+def delete_recurring_expense(recurring_id):
+    """Delete (deactivate) a recurring expense."""
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        recurring = db_session.query(RecurringExpense).filter_by(
+            id=recurring_id,
+            user_id=user_id
+        ).first()
+
+        if recurring:
+            recurring.is_active = False
+            db_session.commit()
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Recurring expense not found'}), 404
+    finally:
+        db_session.close()
+
+@app.route('/api/recurring-expenses/generate', methods=['POST'])
+@login_required
+def generate_recurring_expenses():
+    """Generate expenses from recurring templates for today."""
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        today = datetime.now().date()
+        generated_count = 0
+
+        # Get all active recurring expenses
+        recurring_list = db_session.query(RecurringExpense).filter_by(
+            user_id=user_id,
+            is_active=True
+        ).all()
+
+        for recurring in recurring_list:
+            # Skip if not started yet
+            if today < recurring.start_date:
+                continue
+
+            # Skip if ended
+            if recurring.end_date and today > recurring.end_date:
+                continue
+
+            # Skip if already generated today
+            if recurring.last_generated == today:
+                continue
+
+            should_generate = False
+
+            # Check if we should generate based on frequency
+            if recurring.frequency == 'daily':
+                should_generate = True
+            elif recurring.frequency == 'weekly':
+                if recurring.day_of_week == today.weekday():
+                    should_generate = True
+            elif recurring.frequency == 'monthly':
+                if recurring.day_of_month == today.day:
+                    should_generate = True
+            elif recurring.frequency == 'yearly':
+                if recurring.start_date.month == today.month and recurring.start_date.day == today.day:
+                    should_generate = True
+
+            if should_generate:
+                # Create the expense
+                expense = Expense(
+                    user_id=user_id,
+                    date=today,
+                    category=recurring.category,
+                    amount=recurring.amount,
+                    description=f"{recurring.name} (recurring)"
+                )
+                db_session.add(expense)
+
+                # Update last generated
+                recurring.last_generated = today
+                generated_count += 1
+
+        db_session.commit()
+        return jsonify({'success': True, 'generated': generated_count})
     finally:
         db_session.close()
 

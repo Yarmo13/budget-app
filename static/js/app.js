@@ -897,8 +897,22 @@ async function loadSettings() {
             e.preventDefault();
             await saveTrackingStartDate();
         });
+
+        // Initialize recurring expenses
+        initializeRecurringExpenses();
+        loadRecurringExpenses();
     } catch (error) {
         console.error('Error loading settings:', error);
+    }
+}
+
+function initializeRecurringExpenses() {
+    const createBtn = document.getElementById('createRecurringBtn');
+    const generateBtn = document.getElementById('generateRecurringBtn');
+
+    if (createBtn && generateBtn) {
+        createBtn.onclick = showCreateRecurringModal;
+        generateBtn.onclick = generateRecurringExpenses;
     }
 }
 
@@ -927,5 +941,168 @@ async function saveTrackingStartDate() {
     } catch (error) {
         console.error('Error saving tracking start date:', error);
         showNotification('Error saving tracking start date', 'error');
+    }
+}
+
+// Recurring Expenses functionality
+async function loadRecurringExpenses() {
+    try {
+        const response = await fetch('/api/recurring-expenses');
+        const recurring = await response.json();
+
+        const list = document.getElementById('recurringList');
+
+        if (recurring.length === 0) {
+            list.innerHTML = '<p class="no-data">No recurring expenses set up yet.</p>';
+            return;
+        }
+
+        list.innerHTML = recurring.map(r => {
+            const frequencyText = r.frequency.charAt(0).toUpperCase() + r.frequency.slice(1);
+            const lastGen = r.last_generated ? `Last generated: ${formatDate(r.last_generated)}` : 'Not generated yet';
+
+            return `
+                <div class="expense-item">
+                    <div class="expense-info">
+                        <div class="expense-category">${r.category}</div>
+                        <div style="margin-top: 8px;">
+                            <strong>${r.name}</strong> - $${r.amount.toFixed(2)}
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 4px;">
+                            ${frequencyText} • Starts: ${formatDate(r.start_date)}${r.end_date ? ` • Ends: ${formatDate(r.end_date)}` : ''}
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                            ${lastGen}
+                        </div>
+                    </div>
+                    <div class="expense-actions">
+                        <button onclick="deleteRecurring(${r.id})" class="btn-delete">Delete</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading recurring expenses:', error);
+    }
+}
+
+function showCreateRecurringModal() {
+    const name = prompt('Name of recurring expense (e.g., "Netflix Subscription", "Rent"):');
+    if (!name) return;
+
+    const category = prompt('Category (Groceries, Dining Out, Transportation, Gas, Entertainment, Utilities, Shopping, Healthcare, Housing, Insurance, Subscriptions, Other):');
+    if (!category) return;
+
+    const amount = parseFloat(prompt('Amount ($):'));
+    if (!amount || amount <= 0) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+    }
+
+    const frequency = prompt('Frequency (daily, weekly, monthly, yearly):');
+    if (!['daily', 'weekly', 'monthly', 'yearly'].includes(frequency)) {
+        showNotification('Please enter valid frequency: daily, weekly, monthly, or yearly', 'error');
+        return;
+    }
+
+    const startDate = prompt('Start date (YYYY-MM-DD):');
+    if (!startDate) return;
+
+    let dayOfMonth = null;
+    let dayOfWeek = null;
+
+    if (frequency === 'monthly') {
+        dayOfMonth = parseInt(prompt('Day of month (1-31):'));
+        if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) {
+            showNotification('Please enter valid day (1-31)', 'error');
+            return;
+        }
+    } else if (frequency === 'weekly') {
+        dayOfWeek = parseInt(prompt('Day of week (0=Monday, 1=Tuesday, 2=Wednesday, 3=Thursday, 4=Friday, 5=Saturday, 6=Sunday):'));
+        if (dayOfWeek === null || dayOfWeek < 0 || dayOfWeek > 6) {
+            showNotification('Please enter valid day (0-6)', 'error');
+            return;
+        }
+    }
+
+    const endDate = prompt('End date (YYYY-MM-DD, or leave blank for no end):');
+
+    createRecurringExpense({
+        name,
+        category,
+        amount,
+        frequency,
+        start_date: startDate,
+        end_date: endDate || null,
+        day_of_month: dayOfMonth,
+        day_of_week: dayOfWeek
+    });
+}
+
+async function createRecurringExpense(data) {
+    try {
+        const response = await fetch('/api/recurring-expenses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            showNotification('Recurring expense created!', 'success');
+            loadRecurringExpenses();
+        } else {
+            showNotification('Error creating recurring expense', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating recurring expense:', error);
+        showNotification('Error creating recurring expense', 'error');
+    }
+}
+
+async function deleteRecurring(id) {
+    showConfirmModal(
+        'Delete Recurring Expense?',
+        'This will stop generating this expense automatically. Past expenses will remain.',
+        async () => {
+            try {
+                const response = await fetch(`/api/recurring-expenses/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showNotification('Recurring expense deleted', 'success');
+                    loadRecurringExpenses();
+                } else {
+                    showNotification('Error deleting recurring expense', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting recurring expense:', error);
+                showNotification('Error deleting recurring expense', 'error');
+            }
+        }
+    );
+}
+
+async function generateRecurringExpenses() {
+    try {
+        const response = await fetch('/api/recurring-expenses/generate', {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.generated > 0) {
+                showNotification(`Generated ${data.generated} recurring expense(s) for today!`, 'success');
+                loadExpenses(); // Reload expenses to show new ones
+            } else {
+                showNotification('No recurring expenses due today', 'success');
+            }
+        } else {
+            showNotification('Error generating recurring expenses', 'error');
+        }
+    } catch (error) {
+        console.error('Error generating recurring expenses:', error);
+        showNotification('Error generating recurring expenses', 'error');
     }
 }

@@ -250,6 +250,19 @@
                     Months before the tracking start date will show full budgets. Months after will show full budgets too.
                 </p>
             </div>
+
+            <div class="expense-list-container" style="margin-top: 40px;">
+                <h3>Recurring Expenses</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Set up expenses that repeat automatically (rent, subscriptions, etc.).
+                    Click "Generate Today's Recurring Expenses" to add them to your expenses list.
+                </p>
+
+                <button id="createRecurringBtn" class="btn btn-primary" style="margin-bottom: 16px;">Create Recurring Expense</button>
+                <button id="generateRecurringBtn" class="btn btn-secondary" style="margin-bottom: 16px; margin-left: 10px;">Generate Today's Recurring Expenses</button>
+
+                <div id="recurringList"></div>
+            </div>
         </div>
     </div>
 

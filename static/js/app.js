@@ -929,8 +929,20 @@ async function saveTrackingStartDate() {
         const data = await response.json();
 
         if (data.success) {
-            showNotification('Tracking start date saved! Budgets will be automatically prorated.', 'success');
+            showNotification('✅ Tracking start date saved successfully! Your budgets are now prorated based on tracking days.', 'success');
             loadSettings();
+
+            // Show additional confirmation in the UI
+            const confirmDiv = document.getElementById('currentTrackingDate');
+            if (confirmDiv) {
+                confirmDiv.style.backgroundColor = '#d1fae5';
+                confirmDiv.style.border = '2px solid #10b981';
+                setTimeout(() => {
+                    confirmDiv.style.backgroundColor = 'var(--bg-secondary)';
+                    confirmDiv.style.border = 'none';
+                }, 2000);
+            }
+
             // Reload dashboard if visible to show updated budgets
             if (document.getElementById('dashboard').classList.contains('active')) {
                 loadDashboard();
@@ -987,56 +999,78 @@ async function loadRecurringExpenses() {
 }
 
 function showCreateRecurringModal() {
-    const name = prompt('Name of recurring expense (e.g., "Netflix Subscription", "Rent"):');
-    if (!name) return;
+    const modal = document.getElementById('recurringModal');
+    const form = document.getElementById('recurringExpenseForm');
+    const frequencySelect = document.getElementById('recurringFrequency');
+    const dayOfMonthGroup = document.getElementById('dayOfMonthGroup');
+    const dayOfWeekGroup = document.getElementById('dayOfWeekGroup');
 
-    const category = prompt('Category (Groceries, Dining Out, Transportation, Gas, Entertainment, Utilities, Shopping, Healthcare, Housing, Insurance, Subscriptions, Other):');
-    if (!category) return;
+    // Reset form
+    form.reset();
+    dayOfMonthGroup.style.display = 'none';
+    dayOfWeekGroup.style.display = 'none';
 
-    const amount = parseFloat(prompt('Amount ($):'));
-    if (!amount || amount <= 0) {
-        showNotification('Please enter a valid amount', 'error');
-        return;
-    }
+    // Set default start date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('recurringStartDate').value = today;
 
-    const frequency = prompt('Frequency (daily, weekly, monthly, yearly):');
-    if (!['daily', 'weekly', 'monthly', 'yearly'].includes(frequency)) {
-        showNotification('Please enter valid frequency: daily, weekly, monthly, or yearly', 'error');
-        return;
-    }
+    // Show/hide day fields based on frequency
+    frequencySelect.onchange = function() {
+        dayOfMonthGroup.style.display = this.value === 'monthly' ? 'block' : 'none';
+        dayOfWeekGroup.style.display = this.value === 'weekly' ? 'block' : 'none';
+    };
 
-    const startDate = prompt('Start date (YYYY-MM-DD):');
-    if (!startDate) return;
+    // Handle form submission
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
 
-    let dayOfMonth = null;
-    let dayOfWeek = null;
+    document.getElementById('recurringExpenseForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-    if (frequency === 'monthly') {
-        dayOfMonth = parseInt(prompt('Day of month (1-31):'));
-        if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) {
-            showNotification('Please enter valid day (1-31)', 'error');
-            return;
+        const frequency = document.getElementById('recurringFrequency').value;
+        let dayOfMonth = null;
+        let dayOfWeek = null;
+
+        if (frequency === 'monthly') {
+            dayOfMonth = parseInt(document.getElementById('recurringDayOfMonth').value);
+        } else if (frequency === 'weekly') {
+            dayOfWeek = parseInt(document.getElementById('recurringDayOfWeek').value);
         }
-    } else if (frequency === 'weekly') {
-        dayOfWeek = parseInt(prompt('Day of week (0=Monday, 1=Tuesday, 2=Wednesday, 3=Thursday, 4=Friday, 5=Saturday, 6=Sunday):'));
-        if (dayOfWeek === null || dayOfWeek < 0 || dayOfWeek > 6) {
-            showNotification('Please enter valid day (0-6)', 'error');
-            return;
-        }
-    }
 
-    const endDate = prompt('End date (YYYY-MM-DD, or leave blank for no end):');
+        const endDate = document.getElementById('recurringEndDate').value;
 
-    createRecurringExpense({
-        name,
-        category,
-        amount,
-        frequency,
-        start_date: startDate,
-        end_date: endDate || null,
-        day_of_month: dayOfMonth,
-        day_of_week: dayOfWeek
+        await createRecurringExpense({
+            name: document.getElementById('recurringName').value,
+            category: document.getElementById('recurringCategory').value,
+            amount: parseFloat(document.getElementById('recurringAmount').value),
+            frequency: frequency,
+            start_date: document.getElementById('recurringStartDate').value,
+            end_date: endDate || null,
+            day_of_month: dayOfMonth,
+            day_of_week: dayOfWeek
+        });
+
+        closeRecurringModal();
     });
+
+    // Re-attach frequency change listener
+    document.getElementById('recurringFrequency').onchange = function() {
+        document.getElementById('dayOfMonthGroup').style.display = this.value === 'monthly' ? 'block' : 'none';
+        document.getElementById('dayOfWeekGroup').style.display = this.value === 'weekly' ? 'block' : 'none';
+    };
+
+    modal.classList.add('show');
+
+    // Close on overlay click
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            closeRecurringModal();
+        }
+    };
+}
+
+function closeRecurringModal() {
+    document.getElementById('recurringModal').classList.remove('show');
 }
 
 async function createRecurringExpense(data) {

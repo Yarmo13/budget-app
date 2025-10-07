@@ -25,6 +25,39 @@ CATEGORIES = [
     'Other'
 ]
 
+def get_prorated_budget(user_id, year, month, monthly_budget, db_session):
+    """Calculate prorated budget based on tracking start date for a specific month."""
+    import calendar
+
+    # Get tracking start date from settings
+    tracking_setting = db_session.query(Settings).filter_by(
+        user_id=user_id,
+        key='tracking_start_date'
+    ).first()
+
+    if not tracking_setting or not tracking_setting.value:
+        # No tracking start date set, return full budget
+        return monthly_budget
+
+    tracking_start = datetime.strptime(tracking_setting.value, '%Y-%m-%d').date()
+
+    # Only prorate if tracking started in the same month/year we're calculating
+    if tracking_start.year != year or tracking_start.month != month:
+        # If tracking started before this month, use full budget
+        if tracking_start < datetime(year, month, 1).date():
+            return monthly_budget
+        # If tracking starts after this month, budget is 0
+        else:
+            return 0
+
+    # Calculate proration
+    days_in_month = calendar.monthrange(year, month)[1]
+    tracking_day = tracking_start.day
+    days_tracked = days_in_month - tracking_day + 1  # +1 to include the start day
+
+    prorated_budget = (monthly_budget / days_in_month) * days_tracked
+    return round(prorated_budget, 2)
+
 def get_current_user():
     """Get the current logged-in user."""
     if 'user_id' not in session:
@@ -242,8 +275,11 @@ def dashboard():
         total_spent = 0
 
         for category, limit in budget_dict.items():
+            # Get prorated budget for current month
+            prorated_limit = get_prorated_budget(user_id, now.year, now.month, limit, db_session)
+
             spent = spending_dict.get(category, 0)
-            percentage = (spent / limit * 100) if limit > 0 else 0
+            percentage = (spent / prorated_limit * 100) if prorated_limit > 0 else 0
 
             status = 'safe'
             if percentage >= 100:
@@ -253,14 +289,14 @@ def dashboard():
 
             dashboard_data.append({
                 'category': category,
-                'budget': limit,
+                'budget': prorated_limit,
                 'spent': spent,
-                'remaining': max(0, limit - spent),
+                'remaining': max(0, prorated_limit - spent),
                 'percentage': round(percentage, 1),
                 'status': status
             })
 
-            total_budget += limit
+            total_budget += prorated_limit
             total_spent += spent
 
         # Add categories with spending but no budget
@@ -541,6 +577,59 @@ def delete_goal(goal_id):
     finally:
         db_session.close()
 
+@app.route('/api/settings/tracking-start-date', methods=['GET', 'POST'])
+@login_required
+def tracking_start_date():
+    """Get or set the tracking start date."""
+    user_id = session['user_id']
+    db_session = get_session()
+    try:
+        if request.method == 'POST':
+            data = request.json
+            start_date = data.get('start_date')
+
+            if not start_date:
+                return jsonify({'success': False, 'error': 'Start date is required'}), 400
+
+            # Validate date format
+            try:
+                datetime.strptime(start_date, '%Y-%m-%d')
+            except ValueError:
+                return jsonify({'success': False, 'error': 'Invalid date format'}), 400
+
+            # Check if setting exists
+            setting = db_session.query(Settings).filter_by(
+                user_id=user_id,
+                key='tracking_start_date'
+            ).first()
+
+            if setting:
+                setting.value = start_date
+                setting.updated_at = datetime.utcnow()
+            else:
+                setting = Settings(
+                    user_id=user_id,
+                    key='tracking_start_date',
+                    value=start_date
+                )
+                db_session.add(setting)
+
+            db_session.commit()
+            return jsonify({'success': True, 'start_date': start_date})
+
+        else:  # GET
+            setting = db_session.query(Settings).filter_by(
+                user_id=user_id,
+                key='tracking_start_date'
+            ).first()
+
+            if setting:
+                return jsonify({'start_date': setting.value})
+            else:
+                return jsonify({'start_date': None})
+    finally:
+        db_session.close()
+
 @app.route('/api/reports/monthly/<year_month>')
 @login_required
 def monthly_report(year_month):
@@ -591,24 +680,27 @@ def monthly_report(year_month):
 
         for category in set(list(budget_dict.keys()) + list(spending_dict.keys())):
             budget = budget_dict.get(category, 0)
+            # Get prorated budget for the specified month
+            prorated_budget = get_prorated_budget(user_id, year, month, budget, db_session)
+
             spent_data = spending_dict.get(category, {'total': 0, 'count': 0})
             spent = spent_data['total']
             count = spent_data['count']
 
-            difference = budget - spent
-            percentage = (spent / budget * 100) if budget > 0 else 0
+            difference = prorated_budget - spent
+            percentage = (spent / prorated_budget * 100) if prorated_budget > 0 else 0
 
             status = 'under'
-            if budget == 0:
+            if prorated_budget == 0:
                 status = 'no_budget'
-            elif spent > budget:
+            elif spent > prorated_budget:
                 status = 'over'
             elif percentage >= 80:
                 status = 'warning'
 
             categories.append({
                 'category': category,
-                'budget': budget,
+                'budget': prorated_budget,
                 'spent': spent,
                 'difference': difference,
                 'percentage': round(percentage, 1),
@@ -617,7 +709,7 @@ def monthly_report(year_month):
             })
 
             total_spent += spent
-            total_budget += budget
+            total_budget += prorated_budget
 
         return jsonify({
             'month': year_month,

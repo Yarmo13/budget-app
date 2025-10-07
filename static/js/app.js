@@ -71,6 +71,8 @@ function initializeTabs() {
                 loadAvailableMonths();
             } else if (targetTab === 'visualizations') {
                 loadVisualizations();
+            } else if (targetTab === 'settings') {
+                loadSettings();
             }
         });
     });
@@ -866,4 +868,64 @@ async function deleteGoal(goalId) {
             }
         }
     );
+}
+
+// Settings functionality
+async function loadSettings() {
+    try {
+        // Load current tracking start date
+        const response = await fetch('/api/settings/tracking-start-date');
+        const data = await response.json();
+
+        if (data.start_date) {
+            document.getElementById('trackingDateDisplay').textContent = formatDate(data.start_date);
+            document.getElementById('currentTrackingDate').style.display = 'block';
+            document.getElementById('trackingStartDate').value = data.start_date;
+        } else {
+            document.getElementById('currentTrackingDate').style.display = 'none';
+            // Set today as default
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('trackingStartDate').value = today;
+        }
+
+        // Initialize form handler
+        const form = document.getElementById('trackingDateForm');
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+
+        newForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveTrackingStartDate();
+        });
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+async function saveTrackingStartDate() {
+    const startDate = document.getElementById('trackingStartDate').value;
+
+    try {
+        const response = await fetch('/api/settings/tracking-start-date', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start_date: startDate })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Tracking start date saved! Budgets will be automatically prorated.', 'success');
+            loadSettings();
+            // Reload dashboard if visible to show updated budgets
+            if (document.getElementById('dashboard').classList.contains('active')) {
+                loadDashboard();
+            }
+        } else {
+            showNotification(data.error || 'Error saving tracking start date', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving tracking start date:', error);
+        showNotification('Error saving tracking start date', 'error');
+    }
 }
